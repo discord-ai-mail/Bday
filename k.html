@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+<title>Tanya Sharma — CelebModeOn Tribute (15s)</title>
+
+<!-- Google font (system fallback included) -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;600;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --w: 360px; /* base width reference for scaling (phone) */
+    --h: 640px; /* height to keep 9:16 ratio */
+    --bg:#06060a;
+    --accent: linear-gradient(90deg,#ffd27a,#ff6fb5);
+  }
+
+  /* Full-viewport centered story container scaled responsively */
+  html,body{
+    height:100%;
+    margin:0;
+    background: linear-gradient(180deg,#030312 0%, #0b0b14 100%);
+    font-family: 'Montserrat', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color: white;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .stage {
+    width: min(420px, 92vw);
+    aspect-ratio: 9 / 16;
+    margin: calc( (100vh - min(92vh, calc(100vw * 16 / 9))) / 2 ) auto; /* vert center */
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    background: radial-gradient(1200px 800px at 20% 10%, rgba(255,200,100,0.04), transparent 8%),
+                radial-gradient(900px 600px at 80% 80%, rgba(120,100,255,0.03), transparent 8%),
+                linear-gradient(180deg,#06060a 0%, #0b0b14 100%);
+  }
+
+  /* cinematic vignette */
+  .stage::after{
+    content:"";
+    position:absolute; inset:0;
+    pointer-events:none;
+    box-shadow: inset 0 120px 160px rgba(0,0,0,0.55), inset 0 -80px 120px rgba(0,0,0,0.55);
+    mix-blend-mode:multiply;
+    border-radius:18px;
+  }
+
+  /* sparkle canvas (SVG will be injected with JS) */
+  .sparkles{ position:absolute; inset:0; pointer-events:none; z-index:6; }
+
+  /* Scenes wrapper that runs the timeline animation */
+  .timeline { position:absolute; inset:0; z-index:2; display:block; }
+
+  /* scene base */
+  .scene {
+    position:absolute; inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    text-align:center;
+    padding:28px;
+    box-sizing:border-box;
+  }
+
+  /* text styles */
+  .headline{
+    font-weight:800;
+    letter-spacing:0.6px;
+    font-size:22px;
+    filter: drop-shadow(0 6px 20px rgba(0,0,0,0.7));
+  }
+  .sub{
+    font-weight:300;
+    font-size:14px;
+    margin-top:8px;
+    opacity:0.95;
+  }
+
+  /* gift / intro logo look */
+  .badge {
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border-radius:16px;
+    padding:10px 16px;
+    backdrop-filter: blur(6px) saturate(1.1);
+    border: 1px solid rgba(255,255,255,0.04);
+    display:inline-flex;
+    gap:8px;
+    align-items:center;
+  }
+  .logoMark {
+    width:44px; height:44px;
+    border-radius:10px;
+    background: radial-gradient(circle at 30% 20%, #fff7d9, #ffd27a 25%, #ff6fb5 90%);
+    box-shadow: 0 8px 30px rgba(255,120,160,0.12);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:800;
+    color:#111;
+    font-size:20px;
+  }
+
+  /* photo container */
+  .photo {
+    width:84%;
+    max-width:320px;
+    height:56%;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    transform-origin:center center;
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));
+    border: 1px solid rgba(255,255,255,0.03);
+  }
+  .photo img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+    transform: scale(1.02);
+    transition: transform 1s ease;
+  }
+
+  /* watermark */
+  .watermark {
+    position:absolute;
+    right:12px;
+    bottom:12px;
+    z-index:10;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:0.4px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    padding:8px 10px;
+    border-radius:10px;
+    backdrop-filter: blur(6px);
+    border:1px solid rgba(255,255,255,0.03);
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+
+  /* timeline keyframes: we will toggle opacity/transform for each scene based on exact seconds */
+  /* Scene 1 (0-3s) : intro badge */
+  .s1 { opacity:0; transform: translateY(12px) scale(0.99); z-index:3; }
+  .s2 { opacity:0; transform: translateY(12px) scale(0.99); z-index:4; }
+  .s3 { opacity:0; transform: translateY(0) scale(1); z-index:5; }
+  .s4 { opacity:0; transform: translateY(0) scale(1); z-index:6; }
+
+  /* We'll animate via JS timeline to set classes at exact times to keep it accurate. */
+
+  /* small accent glimmer under text */
+  .glimmer {
+    width:120px;height:6px;
+    margin-top:12px;
+    border-radius:6px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.16), rgba(255,255,255,0.03));
+    filter: blur(10px);
+  }
+
+  /* overlay caption panels */
+  .caption {
+    margin-top:14px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.18), rgba(255,255,255,0.01));
+    padding:10px 14px;
+    border-radius:10px;
+    font-size:14px;
+    backdrop-filter: blur(6px);
+    border:1px solid rgba(255,255,255,0.03);
+    display:inline-block;
+  }
+
+  /* small sparkle animation for photo entries */
+  .spark-anim { position:absolute; inset:0; pointer-events:none; z-index:5; }
+
+  /* closing badge */
+  .closing {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    align-items:center;
+  }
+  .closing .tag {
+    font-weight:600;
+    font-size:16px;
+  }
+  .closing .small {
+    font-size:13px;
+    opacity:0.95;
+  }
+
+  /* make sure stage scales well on larger screens */
+  @media (min-width:800px){
+    .stage { width:420px; }
+    .headline { font-size:24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <div class="timeline">
+
+    <!-- Scene 1: intro (0 - 3s) -->
+    <div class="scene s1" id="s1" aria-hidden="true">
+      <div class="badge" style="transform:translateY(-4px);">
+        <div class="logoMark">CM</div>
+        <div style="text-align:left">
+          <div style="font-weight:700;font-size:14px">CelebModeOn</div>
+          <div style="font-size:11px;opacity:0.85">Signature Tribute</div>
+        </div>
+      </div>
+
+      <div style="height:18px"></div>
+      <div class="headline" style="font-size:18px">The Charm. The Grace. The Stardom.</div>
+      <div class="sub" style="max-width:260px;margin-top:8px;opacity:0.9">A small celebration for Tanya Sharma — cheers to more fans & success.</div>
+      <div class="glimmer" aria-hidden="true"></div>
+    </div>
+
+    <!-- Scene 2: gift open / greeting (3 - 7s) -->
+    <div class="scene s2" id="s2" aria-hidden="true">
+      <div style="transform:translateY(-8px);">
+        <!-- subtle gift emoji / icon -->
+        <div style="font-size:56px; filter:drop-shadow(0 10px 30px rgba(0,0,0,0.6));">🎁</div>
+      </div>
+      <div style="height:6px"></div>
+      <div class="headline">Celebrating Tanya Sharma ✨</div>
+      <div class="caption">Gaining hearts, inspiring fans — keep shining.</div>
+    </div>
+
+    <!-- Scene 3: first photo (7 - 11s) -->
+    <div class="scene s3" id="s3" aria-hidden="true">
+      <div class="photo" id="photo1">
+        <img src="tanya.png" alt="Tanya photo 1" id="img1">
+      </div>
+      <div style="height:12px"></div>
+      <div class="caption">Gaining hearts, inspiring fans 🌸</div>
+    </div>
+
+    <!-- Scene 4: second photo + closing (11 - 15s) -->
+    <div class="scene s4" id="s4" aria-hidden="true">
+      <div class="photo" id="photo2">
+        <img src="tanya2.png" alt="Tanya photo 2" id="img2">
+      </div>
+      <div style="height:12px"></div>
+      <div class="closing">
+        <div class="tag">Wishing more success & future hits ahead 💫</div>
+        <div class="small">With love — CelebModeOn ❤️</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- sparkles container — JS will draw SVG particles -->
+  <div class="sparkles" id="sparkles" aria-hidden="true"></div>
+
+  <!-- watermark -->
+  <div class="watermark" aria-hidden="true">
+    <div style="width:28px;height:28px;border-radius:6px;background:linear-gradient(90deg,#ffd27a,#ff6fb5);display:flex;align-items:center;justify-content:center;font-weight:800;color:#111;">CM</div>
+    <div style="font-size:12px">CelebModeOn</div>
+  </div>
+</div>
+
+<script>
+/*
+ Timeline controller
+ - Scenes: s1 (0-3s), s2 (3-7s), s3 (7-11s), s4 (11-15s)
+ - We'll toggle visibility + animate simple transforms for cinematic feel.
+*/
+
+const setVisible = (el, visible) => {
+  if(!el) return;
+  if(visible){
+    el.style.transition = 'opacity 600ms cubic-bezier(.2,.9,.3,1), transform 700ms cubic-bezier(.2,.9,.3,1)';
+    el.style.opacity = 1;
+    el.style.transform = 'translateY(0) scale(1)';
+  } else {
+    el.style.transition = 'opacity 450ms ease, transform 450ms ease';
+    el.style.opacity = 0;
+    el.style.transform = 'translateY(10px) scale(0.99)';
+  }
+};
+
+// init scenes hidden
+const scenes = ['s1','s2','s3','s4'].map(id => document.getElementById(id));
+scenes.forEach(s => {
+  if(s){ s.style.opacity = 0; s.style.transform = 'translateY(12px) scale(0.99)'; }
+});
+
+// subtle image zoom animations when visible
+const img1 = document.getElementById('img1');
+const img2 = document.getElementById('img2');
+
+function timelineStart(){
+  const t0 = performance.now();
+
+  // helper to schedule
+  const schedule = (timeSec, fn) => {
+    const ms = Math.max(0, Math.round(timeSec*1000 - (performance.now() - t0)));
+    setTimeout(fn, ms);
+  }
+
+  // Scene 1: 0-3s
+  schedule(0, ()=> { setVisible(document.getElementById('s1'), true); });
+  schedule(3, ()=> { setVisible(document.getElementById('s1'), false); });
+
+  // Scene 2: 3-7s
+  schedule(3, ()=> { setVisible(document.getElementById('s2'), true); spawnConfetti(18); });
+  schedule(7, ()=> { setVisible(document.getElementById('s2'), false); });
+
+  // Scene 3: 7-11s
+  schedule(7.1, ()=> {
+    setVisible(document.getElementById('s3'), true);
+    if(img1) { img1.style.transform = 'scale(1.08)'; setTimeout(()=> img1.style.transform='scale(1.02)', 1200); }
+    spawnSparkles(12);
+  });
+  schedule(11, ()=> { setVisible(document.getElementById('s3'), false); });
+
+  // Scene 4: 11-15s
+  schedule(11.1, ()=> {
+    setVisible(document.getElementById('s4'), true);
+    if(img2) { img2.style.transform = 'scale(1.06)'; setTimeout(()=> img2.style.transform='scale(1.02)', 1200); }
+    spawnSparkles(22);
+  });
+
+  // final fadeout at 15s
+  schedule(15, ()=> {
+    const stage = document.getElementById('stage');
+    stage.style.transition = 'opacity 900ms ease';
+    stage.style.opacity = 0;
+    // keep it hidden after fade if needed
+  });
+
+  // optional loop: comment out if you want only single play
+  // schedule(17, () => window.location.reload());
+}
+
+// sparkles & confetti simple SVG generator
+function spawnSparkles(count=16){
+  const container = document.getElementById('sparkles');
+  if(!container) return;
+  // clear old
+  container.innerHTML = '';
+  const svgns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgns,'svg');
+  svg.setAttribute('viewBox','0 0 360 640');
+  svg.setAttribute('width','100%');
+  svg.setAttribute('height','100%');
+  for(let i=0;i<count;i++){
+    const cx = Math.random()*360;
+    const cy = Math.random()*260 + 60;
+    const r = Math.random()*3 + 1.2;
+    const c = ['#ffd27a','#ff6fb5','#ffffff'][Math.floor(Math.random()*3)];
+    const circle = document.createElementNS(svgns,'circle');
+    circle.setAttribute('cx',cx);
+    circle.setAttribute('cy',cy);
+    circle.setAttribute('r',r);
+    circle.setAttribute('fill',c);
+    circle.style.opacity = 0;
+    svg.appendChild(circle);
+    // animate via CSS transitions
+    (function(el, idx){
+      setTimeout(()=> {
+        el.style.transition = 'opacity 500ms ease, transform 900ms cubic-bezier(.2,.9,.2,1)';
+        el.style.opacity = 1;
+        el.style.transform = 'translateY(-40px) scale(1.6)';
+      }, 80*idx);
+      // fade out
+      setTimeout(()=> { el.style.opacity = 0; }, 1200 + 60*idx);
+    })(circle, i);
+  }
+  container.appendChild(svg);
+}
+
+function spawnConfetti(count=20){
+  const container = document.getElementById('sparkles');
+  if(!container) return;
+  // quick confetti shapes (rects) falling
+  const svgns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgns,'svg');
+  svg.setAttribute('viewBox','0 0 360 640');
+  svg.setAttribute('width','100%');
+  svg.setAttribute('height','100%');
+  for(let i=0;i<count;i++){
+    const rect = document.createElementNS(svgns,'rect');
+    const x = Math.random()*360;
+    const w = 6 + Math.random()*8;
+    const h = 8 + Math.random()*12;
+    rect.setAttribute('x', x);
+    rect.setAttribute('y', -30 - Math.random()*40);
+    rect.setAttribute('width', w);
+    rect.setAttribute('height', h);
+    rect.setAttribute('rx', 1.5);
+    rect.setAttribute('fill', ['#ffd27a','#ff6fb5','#ffffff'][Math.floor(Math.random()*3)]);
+    rect.style.opacity = 0.95;
+    svg.appendChild(rect);
+
+    (function(el, delay){
+      setTimeout(()=> {
+        el.style.transition = 'transform 1600ms cubic-bezier(.2,.9,.3,1), opacity 1600ms linear';
+        el.style.transform = 'translateY(760px) rotate(' + (Math.random()*360) + 'deg)';
+        el.style.opacity = 0.95;
+      }, delay);
+      setTimeout(()=> { el.style.opacity = 0; }, delay + 1500);
+    })(rect, Math.random()*400);
+  }
+  container.appendChild(svg);
+}
+
+// start when DOM is ready
+document.addEventListener('DOMContentLoaded', ()=> {
+  // small initial sparkle
+  spawnSparkles(8);
+  // start timeline
+  timelineStart();
+});
+</script>
+</body>
+</html>
